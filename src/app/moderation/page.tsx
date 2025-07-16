@@ -31,6 +31,11 @@ export default function ModerationPage() {
   const postsPerPage = 5;
   const filteredPosts = posts.filter((post) => post.status === statusFilter);
   const totalPages = Math.ceil(filteredPosts.length / postsPerPage);
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) =>
@@ -93,43 +98,16 @@ export default function ModerationPage() {
     rejected: <X className="w-4 h-4" />,
   };
 
+  const getReportColor = (count: number) => {
+    if (count >= 5) return "text-red-800 border-red-600 bg-red-300";
+    if (count >= 3) return "text-red-600 border-red-400 bg-red-200";
+    if (count >= 1) return "text-red-400 border-red-200 bg-red-100";
+    return "text-red-500 border-red-300 bg-red-50";
+  };
+
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">Moderation Queue</h1>
-      {/* Toolbar */}
-      <div className="flex justify-between items-center mb-4">
-        <span className="text-sm text-gray-600">
-          Selected: {selectedIds.length}
-        </span>
-        <div className="space-x-2">
-          <button
-            onClick={selectAll}
-            className="bg-gray-100 px-3 py-1 rounded text-sm hover:bg-gray-200"
-          >
-            Select All
-          </button>
-          <button
-            onClick={clearSelection}
-            className="bg-gray-100 px-3 py-1 rounded text-sm hover:bg-gray-200"
-          >
-            Clear
-          </button>
-          <button
-            onClick={handleBatchApprove}
-            disabled={selectedIds.length === 0}
-            className="bg-green-500 text-white px-3 py-1 rounded text-sm disabled:opacity-50"
-          >
-            Approve Selected
-          </button>
-          <button
-            onClick={handleBatchReject}
-            disabled={selectedIds.length === 0}
-            className="bg-red-500 text-white px-3 py-1 rounded text-sm disabled:opacity-50"
-          >
-            Reject Selected
-          </button>
-        </div>
-      </div>
       <div className="grid grid-cols-3 gap-2 mb-6">
         {(["pending", "approved", "rejected"] as const).map((status) => {
           const isActive = statusFilter === status;
@@ -168,6 +146,60 @@ export default function ModerationPage() {
         })}
       </div>
 
+      {/* Bulk Toolbar - Show only in "pending" status with any selection */}
+      {statusFilter === "pending" && (
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <input
+              type="checkbox"
+              checked={
+                selectedIds.length > 0 &&
+                selectedIds.length ===
+                  posts.filter((p) => p.status === "pending").length
+              }
+              onChange={(e) => {
+                if (e.target.checked) {
+                  selectAll();
+                } else {
+                  clearSelection();
+                }
+              }}
+              className="w-4 h-4"
+            />
+            <span>
+              {selectedIds.length > 0
+                ? `${selectedIds.length} selected`
+                : `Select All (${
+                    posts.filter((p) => p.status === "pending").length
+                  } pending posts)`}
+            </span>
+          </div>
+
+          {selectedIds.length > 0 && (
+            <div className="flex gap-2">
+              <button
+                onClick={clearSelection}
+                className="bg-gray-100 px-3 py-1 rounded text-sm hover:bg-gray-200"
+              >
+                Clear
+              </button>
+              <button
+                onClick={handleBatchApprove}
+                className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600 transition"
+              >
+                Approve Selected
+              </button>
+              <button
+                onClick={handleBatchReject}
+                className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition"
+              >
+                Reject Selected
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Post List */}
       {posts
         .filter((post) => post.status === statusFilter)
@@ -175,11 +207,11 @@ export default function ModerationPage() {
         .map((post) => (
           <div
             key={post.id}
-            className={`p-4 rounded shadow mb-4 transition-transform duration-300 ease-in-out hover:scale-[1.01] ${
-              post.status === "pending" ? "bg-white" : "bg-gray-100"
-            }`}
+            className={`p-4 rounded shadow-sm mb-4 transition-transform duration-300 ease-in-out hover:scale-[1.01]
+            `}
           >
             <div className="flex items-start gap-4">
+              {statusFilter === "pending" && (
               <input
                 type="checkbox"
                 checked={selectedIds.includes(post.id)}
@@ -187,6 +219,7 @@ export default function ModerationPage() {
                 onChange={() => toggleSelect(post.id)}
                 className="mt-1"
               />
+              )}
               {post.imageUrl && (
                 <div className="relative group w-20 h-20 overflow-visible rounded mb-3">
                   <img
@@ -207,8 +240,13 @@ export default function ModerationPage() {
                     </h2>
                     <div className="flex items-center text-sm text-gray-600 gap-2">
                       <User className="w-4 h-4" />
-                      <span>{post.author.username}</span> •
-                      <span>{new Date(post.reportedAt).toLocaleString()}</span>
+                      <span>{post.author.username}</span>
+                      <span>•</span>
+                      <span>
+                        {hasMounted
+                          ? new Date(post.reportedAt).toLocaleString()
+                          : "Loading..."}
+                      </span>
                     </div>
                     <p className="text-[15px] text-gray-600">{post.content}</p>
                   </div>
@@ -238,7 +276,11 @@ export default function ModerationPage() {
                     <span className="bg-gray-100 px-3 py-1 rounded-xl border border-gray-300">
                       Reason: {post.reportedReason}
                     </span>
-                    <span className="bg-gray-100 px-3 py-1 rounded-xl border border-gray-300 flex items-center gap-1 text-red-600">
+                    <span
+                      className={`px-3 py-1 rounded-xl border flex items-center gap-1 text-sm font-medium ${getReportColor(
+                        post.reportCount
+                      )}`}
+                    >
                       <AlertTriangle className="w-4 h-4" />
                       {post.reportCount} reports
                     </span>
