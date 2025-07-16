@@ -1,5 +1,4 @@
 "use client";
-
 import { useAppSelector, useAppDispatch } from "@/redux/hooks";
 import {
   approvePost,
@@ -12,6 +11,7 @@ import PostPreviewModal from "@/components/PostPreviewModal";
 import { Post } from "@/types";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import UndoToast from "@/components/UndoToast";
+import { Eye, X, Check, Clock, User, AlertTriangle } from "lucide-react";
 
 export default function ModerationPage() {
   const posts = useAppSelector((state) => state.posts.posts);
@@ -87,10 +87,15 @@ export default function ModerationPage() {
     return () => window.removeEventListener("keydown", handleKey);
   }, [posts, statusFilter]);
 
+  const statusIcons = {
+    pending: <Clock className="w-4 h-4" />,
+    approved: <Check className="w-4 h-4" />,
+    rejected: <X className="w-4 h-4" />,
+  };
+
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">Moderation Queue</h1>
-
       {/* Toolbar */}
       <div className="flex justify-between items-center mb-4">
         <span className="text-sm text-gray-600">
@@ -125,20 +130,39 @@ export default function ModerationPage() {
           </button>
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-2 mb-4">
+      <div className="grid grid-cols-3 gap-2 mb-6">
         {(["pending", "approved", "rejected"] as const).map((status) => {
-          const count = posts.filter((p) => p.status === status).length;
+          const isActive = statusFilter === status;
+          const styles = {
+            pending: {
+              active: "bg-yellow-400 text-yellow-900 border-yellow-500",
+              hover: "hover:bg-yellow-100 hover:text-yellow-800",
+            },
+            approved: {
+              active: "bg-green-400 text-green-900 border-green-500",
+              hover: "hover:bg-green-100 hover:text-green-800",
+            },
+            rejected: {
+              active: "bg-red-400 text-red-900 border-red-500",
+              hover: "hover:bg-red-100 hover:text-red-800",
+            },
+          };
+          const baseClasses =
+            "w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border transition-all duration-200 shadow-sm";
+          const statusStyle = styles[status];
           return (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
-              className={`w-full px-4 py-2 rounded text-sm capitalize font-semibold shadow ${
-                statusFilter === status
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+              className={`${baseClasses} ${
+                isActive
+                  ? `${statusStyle.active}`
+                  : `bg-white text-gray-700 border-gray-200 ${statusStyle.hover}`
               }`}
             >
-              {status} ({count})
+              {statusIcons[status]}{" "}
+              {status.charAt(0).toUpperCase() + status.slice(1)} (
+              {posts.filter((p) => p.status === status).length})
             </button>
           );
         })}
@@ -151,7 +175,7 @@ export default function ModerationPage() {
         .map((post) => (
           <div
             key={post.id}
-            className={`p-4 rounded shadow mb-4 transition-transform duration-300 ease-in-out hover:scale-[1.02] ${
+            className={`p-4 rounded shadow mb-4 transition-transform duration-300 ease-in-out hover:scale-[1.01] ${
               post.status === "pending" ? "bg-white" : "bg-gray-100"
             }`}
           >
@@ -174,52 +198,87 @@ export default function ModerationPage() {
               )}
               <div className="flex-1">
                 <div className="flex justify-between items-start">
-                  <div>
+                  <div className="space-y-2">
                     <h2
                       className="text-lg font-semibold cursor-pointer underline"
                       onClick={() => setModalPost(post as Post)}
                     >
                       {post.title}
                     </h2>
-                    <p className="text-sm text-gray-600">
-                      By {post.author.username}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Reason: {post.reportedReason}
-                    </p>
-                    <p className="text-sm text-gray-400">
-                      Status: {post.status}
-                    </p>
+                    <div className="flex items-center text-sm text-gray-600 gap-2">
+                      <User className="w-4 h-4" />
+                      <span>{post.author.username}</span> •
+                      <span>{new Date(post.reportedAt).toLocaleString()}</span>
+                    </div>
+                    <p className="text-[15px] text-gray-600">{post.content}</p>
                   </div>
-                  <button
-                    onClick={() => setModalPost(post as Post)}
-                    className="text-sm text-blue-600 underline hover:text-blue-800"
+                  <span
+                    className={`
+                             px-3 py-1 rounded-xl border flex items-center gap-1 text-sm font-medium
+                              ${
+                                post.status === "pending"
+                                  ? "bg-yellow-100 text-yellow-800 border-yellow-300"
+                                  : post.status === "approved"
+                                  ? "bg-green-100 text-green-800 border-green-300"
+                                  : "bg-red-100 text-red-800 border-red-300"
+                              }
+                                `}
                   >
-                    View
-                  </button>
+                    {
+                      statusIcons[
+                        post.status as "pending" | "approved" | "rejected"
+                      ]
+                    }{" "}
+                    {post.status}
+                  </span>
                 </div>
+                <hr className="my-4 border-t border-gray-300" />
+                <div className="flex justify-between  mt-4">
+                  <div className="flex items-center gap-2 text-sm text-gray-700">
+                    <span className="bg-gray-100 px-3 py-1 rounded-xl border border-gray-300">
+                      Reason: {post.reportedReason}
+                    </span>
+                    <span className="bg-gray-100 px-3 py-1 rounded-xl border border-gray-300 flex items-center gap-1 text-red-600">
+                      <AlertTriangle className="w-4 h-4" />
+                      {post.reportCount} reports
+                    </span>
+                  </div>
+                  <div className=" flex gap-4">
+                    <button
+                      onClick={() => setModalPost(post as Post)}
+                      className="flex items-center gap-2 text-sm font-medium border border-blue-500 text-blue-600 px-4 py-1.5 rounded-lg hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 cursor-pointer"
+                    >
+                      <Eye className="w-5 h-5" />
+                      View
+                    </button>
+                    {statusFilter === "pending" && (
+                      <>
+                        <button
+                          onClick={() => {
+                            dispatch(approvePost(post.id));
+                            setToastData({
+                              message: `Post approved`,
+                              undo: () => dispatch(rejectPost(post.id)),
+                            });
+                          }}
+                          disabled={post.status !== "pending"}
+                          className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-white bg-green-500 hover:bg-gradient-to-r from-green-400 to-green-600 hover:scale-[1.03] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                        >
+                          <Check className="w-4 h-4" />
+                          Approve
+                        </button>
 
-                <div className="mt-2 space-x-2">
-                  <button
-                    onClick={() => {
-                      dispatch(approvePost(post.id));
-                      setToastData({
-                        message: `Post approved`,
-                        undo: () => dispatch(rejectPost(post.id)),
-                      });
-                    }}
-                    disabled={post.status !== "pending"}
-                    className="bg-green-500 text-white px-3 py-1 rounded disabled:opacity-50"
-                  >
-                    Approve
-                  </button>
-                  <button
-                    onClick={() => setConfirmRejectId(post.id)}
-                    disabled={post.status !== "pending"}
-                    className="bg-red-500 text-white px-3 py-1 rounded disabled:opacity-50"
-                  >
-                    Reject
-                  </button>
+                        <button
+                          onClick={() => setConfirmRejectId(post.id)}
+                          disabled={post.status !== "pending"}
+                          className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-white bg-red-500 hover:bg-gradient-to-r from-red-400 to-red-600 hover:scale-[1.03] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                        >
+                          <X className="w-4 h-4" />
+                          Reject
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
