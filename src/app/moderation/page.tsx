@@ -12,6 +12,7 @@ import { Post } from "@/types";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import UndoToast from "@/components/UndoToast";
 import { Eye, X, Check, Clock, User, AlertTriangle } from "lucide-react";
+import Image from "next/image";
 
 export default function ModerationPage() {
   const posts = useAppSelector((state) => state.posts.posts);
@@ -112,7 +113,7 @@ export default function ModerationPage() {
     return "text-red-500 border-red-300 bg-red-50";
   };
 
-   if (isLoading) {
+  if (isLoading) {
     return (
       <div className="p-6 max-w-4xl mx-auto">
         <div className="space-y-4">
@@ -250,11 +251,12 @@ export default function ModerationPage() {
                 />
               )}
               {post.imageUrl && (
-                <div className="relative group w-20 h-20 overflow-visible rounded mb-3">
-                  <img
+                <div className="w-20 h-20 overflow-visible rounded mb-3 relative group">
+                  <Image
                     src={post.imageUrl}
                     alt={post.title}
-                    className="absolute inset-0 w-full h-full object-cover rounded-[10px] transition-transform duration-300 ease-in-out group-hover:scale-110"
+                    fill
+                    className="object-cover transition-transform duration-300 group-hover:scale-110  ease-in-out rounded-[10px]"
                   />
                 </div>
               )}
