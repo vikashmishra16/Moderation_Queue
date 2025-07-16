@@ -55,7 +55,7 @@ Make sure you have Node.js installed (v18 or later is recommended).
 ### Installation
 
 ```bash
-git clone https://github.com/vikashmishra16/Moderation_Queue.git
+git clone https://github.com/vikashmishra16/moderation-queue.git
 cd Moderation_Queue
 npm install
 Start npm run dev
