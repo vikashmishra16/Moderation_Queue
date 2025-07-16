@@ -28,7 +28,9 @@ export default function ModerationPage() {
     undo: () => void;
   } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
   const postsPerPage = 5;
+
   const filteredPosts = posts.filter((post) => post.status === statusFilter);
   const totalPages = Math.ceil(filteredPosts.length / postsPerPage);
   const [hasMounted, setHasMounted] = useState(false);
@@ -36,6 +38,11 @@ export default function ModerationPage() {
   useEffect(() => {
     setHasMounted(true);
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 1000);
+    return () => clearTimeout(timer);
+  }, [posts]);
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) =>
@@ -69,7 +76,7 @@ export default function ModerationPage() {
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      const focused = posts.find((p) => p.status === statusFilter); // Simplified — you can track actual selection
+      const focused = posts.find((p) => p.status === statusFilter);
       if (!focused) return;
 
       if (e.key === "a") {
@@ -104,6 +111,28 @@ export default function ModerationPage() {
     if (count >= 1) return "text-red-400 border-red-200 bg-red-100";
     return "text-red-500 border-red-300 bg-red-50";
   };
+
+   if (isLoading) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto">
+        <div className="space-y-4">
+          {Array.from({ length: postsPerPage }).map((_, i) => (
+            <div
+              key={i}
+              className="animate-pulse p-4 rounded shadow-sm bg-white flex gap-4"
+            >
+              <div className="w-20 h-20 bg-gray-200 rounded" />
+              <div className="flex-1 space-y-3">
+                <div className="h-5 bg-gray-200 rounded w-3/4" />
+                <div className="h-4 bg-gray-200 rounded w-1/2" />
+                <div className="h-4 bg-gray-100 rounded w-full" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -212,13 +241,13 @@ export default function ModerationPage() {
           >
             <div className="flex items-start gap-4">
               {statusFilter === "pending" && (
-              <input
-                type="checkbox"
-                checked={selectedIds.includes(post.id)}
-                disabled={post.status !== "pending"}
-                onChange={() => toggleSelect(post.id)}
-                className="mt-1"
-              />
+                <input
+                  type="checkbox"
+                  checked={selectedIds.includes(post.id)}
+                  disabled={post.status !== "pending"}
+                  onChange={() => toggleSelect(post.id)}
+                  className="mt-1"
+                />
               )}
               {post.imageUrl && (
                 <div className="relative group w-20 h-20 overflow-visible rounded mb-3">
