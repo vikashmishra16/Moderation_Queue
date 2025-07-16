@@ -13,6 +13,11 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import UndoToast from "@/components/UndoToast";
 import { Eye, X, Check, Clock, User, AlertTriangle } from "lucide-react";
 import Image from "next/image";
+interface UndoToastProps {
+  message: string;
+  undo: () => void;
+  timestamp: number;
+}
 
 export default function ModerationPage() {
   const posts = useAppSelector((state) => state.posts.posts);
@@ -24,10 +29,9 @@ export default function ModerationPage() {
     "pending" | "approved" | "rejected"
   >("pending");
   const [confirmRejectId, setConfirmRejectId] = useState<string | null>(null);
-  const [toastData, setToastData] = useState<{
-    message: string;
-    undo: () => void;
-  } | null>(null);
+  const [confirmRejectMultiple, setConfirmRejectMultiple] = useState(false);
+  const [confirmApproveMultiple, setConfirmApproveMultiple] = useState(false);
+  const [toastData, setToastData] = useState<UndoToastProps | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const postsPerPage = 5;
@@ -61,18 +65,11 @@ export default function ModerationPage() {
   const clearSelection = () => setSelectedIds([]);
 
   const handleBatchApprove = () => {
-    dispatch(approveMultiplePosts(selectedIds));
-    clearSelection();
+    setConfirmApproveMultiple(true);
   };
 
   const handleBatchReject = () => {
-    const confirmReject = confirm(
-      `Reject ${selectedIds.length} selected post(s)?`
-    );
-    if (confirmReject) {
-      dispatch(rejectMultiplePosts(selectedIds));
-      clearSelection();
-    }
+    setConfirmRejectMultiple(true);
   };
 
   useEffect(() => {
@@ -85,6 +82,7 @@ export default function ModerationPage() {
         setToastData({
           message: "Post approved via shortcut",
           undo: () => dispatch(rejectPost(focused.id)),
+          timestamp: Date.now(),
         });
       }
       if (e.key === "r") {
@@ -93,12 +91,14 @@ export default function ModerationPage() {
       if (e.key === "Escape") {
         setModalPost(null);
         setConfirmRejectId(null);
+        setConfirmRejectMultiple(false);
+        setConfirmApproveMultiple(false);
       }
     };
 
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [posts, statusFilter]);
+  }, [posts, statusFilter, dispatch]);
 
   const statusIcons = {
     pending: <Clock className="w-4 h-4" />,
@@ -332,6 +332,7 @@ export default function ModerationPage() {
                             setToastData({
                               message: `Post approved`,
                               undo: () => dispatch(rejectPost(post.id)),
+                              timestamp: Date.now(),
                             });
                           }}
                           disabled={post.status !== "pending"}
@@ -378,12 +379,45 @@ export default function ModerationPage() {
           </button>
         </div>
       )}
-
       {posts.filter((post) => post.status === statusFilter).length === 0 && (
         <p className="text-center text-gray-500 mt-10">
-          No posts in "{statusFilter}"
+          No posts in {statusFilter}
         </p>
       )}
+      <ConfirmDialog
+        isOpen={confirmApproveMultiple}
+        message={`Are you sure you want to confirm ${selectedIds.length} post(s) as Approved?`}
+        onCancel={() => setConfirmApproveMultiple(false)}
+        onConfirm={() => {
+          dispatch(approveMultiplePosts(selectedIds));
+          setToastData({
+            message: `${selectedIds.length} post(s) approved`,
+            undo: () => dispatch(rejectMultiplePosts(selectedIds)),
+            timestamp: Date.now(),
+          });
+          clearSelection();
+          setConfirmApproveMultiple(false);
+        }}
+         confirmType = 'approve'
+      />
+      <ConfirmDialog
+        isOpen={confirmRejectMultiple}
+        message={`Are you sure you want to reject ${selectedIds.length} post(s)?`}
+        showReasonInput
+        onCancel={() => setConfirmRejectMultiple(false)}
+        onConfirm={(reason) => {
+          dispatch(rejectMultiplePosts(selectedIds));
+          setToastData({
+            message: `${selectedIds.length} post(s) rejected`,
+            undo: () => dispatch(approveMultiplePosts(selectedIds)),
+            timestamp: Date.now(),
+          });
+          console.log("Rejection reason for multiple:", reason);
+          clearSelection();
+          setConfirmRejectMultiple(false);
+        }}
+         confirmType = 'reject'
+      />
       <ConfirmDialog
         isOpen={!!confirmRejectId}
         message="Are you sure you want to reject this post?"
@@ -394,14 +428,21 @@ export default function ModerationPage() {
           setToastData({
             message: "Post rejected",
             undo: () => dispatch(approvePost(confirmRejectId!)),
+            timestamp: Date.now(),
           });
           console.log("Rejection reason:", reason);
           setConfirmRejectId(null);
         }}
+         confirmType = 'reject'
       />
       {toastData && (
-        <UndoToast message={toastData.message} onUndo={toastData.undo} />
-      )}
+  <UndoToast
+    message={toastData.message}
+    onUndo={toastData.undo}
+    timestamp={toastData.timestamp}
+  />
+)}
+
       {/* Modal */}
       <PostPreviewModal
         post={modalPost}

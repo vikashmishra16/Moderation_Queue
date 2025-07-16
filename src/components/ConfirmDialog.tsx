@@ -9,6 +9,7 @@ interface ConfirmDialogProps {
   onConfirm: (reason?: string) => void;
   onCancel: () => void;
   showReasonInput?: boolean;
+  confirmType?: 'approve' | 'reject';
 }
 
 export default function ConfirmDialog({
@@ -18,10 +19,17 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
   showReasonInput = false,
+  confirmType 
 }: ConfirmDialogProps) {
   const [reason, setReason] = useState('');
 
   if (!isOpen) return null;
+
+  const confirmClass =
+    confirmType === 'approve'
+      ? 'bg-green-500 text-white'
+      : 'bg-red-500 text-white';
+  const confirmLabel = confirmType === 'approve' ? 'Approve' : 'Confirm';
 
   return (
     <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
@@ -51,9 +59,9 @@ export default function ConfirmDialog({
               onConfirm(reason);
               setReason('');
             }}
-            className="px-4 py-1 text-sm bg-red-500 text-white rounded"
+            className={`px-4 py-1 text-sm rounded ${confirmClass}`}
           >
-            Confirm
+            {confirmLabel}
           </button>
         </div>
       </div>
