@@ -1,4 +1,3 @@
-// ❗ REQUIRED at the top
 'use client';
 
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';

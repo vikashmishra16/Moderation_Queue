@@ -28,7 +28,7 @@ export default function ModerationPage() {
     undo: () => void;
   } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const postsPerPage = 1;
+  const postsPerPage = 5;
   const filteredPosts = posts.filter((post) => post.status === statusFilter);
   const totalPages = Math.ceil(filteredPosts.length / postsPerPage);
 
@@ -125,20 +125,23 @@ export default function ModerationPage() {
           </button>
         </div>
       </div>
-      <div className="flex gap-4 mb-4">
-        {(["pending", "approved", "rejected"] as const).map((status) => (
-          <button
-            key={status}
-            onClick={() => setStatusFilter(status)}
-            className={`px-4 py-2 rounded-full text-sm capitalize ${
-              statusFilter === status
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 text-gray-800 hover:bg-gray-300"
-            }`}
-          >
-            {status}
-          </button>
-        ))}
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        {(["pending", "approved", "rejected"] as const).map((status) => {
+          const count = posts.filter((p) => p.status === status).length;
+          return (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(status)}
+              className={`w-full px-4 py-2 rounded text-sm capitalize font-semibold shadow ${
+                statusFilter === status
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+              }`}
+            >
+              {status} ({count})
+            </button>
+          );
+        })}
       </div>
 
       {/* Post List */}
@@ -148,7 +151,7 @@ export default function ModerationPage() {
         .map((post) => (
           <div
             key={post.id}
-            className={`p-4 rounded shadow mb-4 transition ${
+            className={`p-4 rounded shadow mb-4 transition-transform duration-300 ease-in-out hover:scale-[1.02] ${
               post.status === "pending" ? "bg-white" : "bg-gray-100"
             }`}
           >
@@ -160,6 +163,15 @@ export default function ModerationPage() {
                 onChange={() => toggleSelect(post.id)}
                 className="mt-1"
               />
+              {post.imageUrl && (
+                <div className="relative group w-20 h-20 overflow-visible rounded mb-3">
+                  <img
+                    src={post.imageUrl}
+                    alt={post.title}
+                    className="absolute inset-0 w-full h-full object-cover rounded-[10px] transition-transform duration-300 ease-in-out group-hover:scale-110"
+                  />
+                </div>
+              )}
               <div className="flex-1">
                 <div className="flex justify-between items-start">
                   <div>
